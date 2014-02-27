@@ -19,7 +19,6 @@ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 PKG_FIXUP:=autoreconf
 PKG_INSTALL=1
-PKG_REMOVE_FILES:=autogen.sh aclocal.m4
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/nls.mk
@@ -27,7 +26,7 @@ include $(INCLUDE_DIR)/nls.mk
 define Package/dleyna-renderer
   SECTION:=multimedia
   CATEGORY:=Multimedia
-  DEPENDS:= +glib2 +libgssdp +libgupnp +libgupnp-av +libgupnp-dlna +libsoup +libdleyna-core
+  DEPENDS:=+gstreamer +glib2 +libgssdp +libgupnp +libgupnp-av +libgupnp-dlna +libsoup +libdleyna-core
   TITLE:=A Headless UPnP Renderer
 endef
 
@@ -37,17 +36,42 @@ define Package/dleyna-renderer/description
   from a UPnP media server.
 endef
 
-CONFIGURE_ARGS+= \
-	--with-build-cc="$(HOSTCC)" \
-	--prefix="\usr"
+TARGET_LDFLAGS += \
+	-Wl,-rpath-link=$(STAGING_DIR)/usr/lib
+
+define Build/Configure
+	(cd $(PKG_BUILD_DIR); ./autogen.sh );
+	$(call Build/Configure/Default)
+endef
+
+define Build/Compile
+	$(MAKE) -C $(PKG_BUILD_DIR) \
+		DESTDIR="$(PKG_INSTALL_DIR)" \
+		all install
+endef
+
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/include/dleyna-1.0/libdleyna/renderer
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/dleyna-1.0/libdleyna/renderer/*.h $(1)/usr/include/dleyna-1.0/libdleyna/renderer/
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/dleyna-renderer-service $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/lib/$(PKG_NAME)
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/$(PKG_NAME)/libdleyna-renderer-1.0.{la,so*} $(1)/usr/lib/$(PKG_NAME)/
+	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
+	$(INSTALL_DATA) \
+		$(PKG_INSTALL_DIR)/usr/lib/pkgconfig/*.pc \
+		$(1)/usr/lib/pkgconfig
+endef
 
 define Package/dleyna-renderer/install
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/$(PKG_NAME)/libdleyna-renderer-1.0.so* $(1)/usr/lib/
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/dleyna-renderer-service $(1)/usr/sbin/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/dleyna-renderer-service $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/lib/$(PKG_NAME)
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/$(PKG_NAME)/libdleyna-renderer-1.0.so* $(1)/usr/lib/$(PKG_NAME)/
+	$(INSTALL_DIR) $(1)/usr/share/dbus-1/services
+	$(CP) $(PKG_INSTALL_DIR)/usr/share/dbus-1/services/*.service $(1)/usr/share/dbus-1/services/
 	$(INSTALL_DIR) $(1)/etc
-	$(INSTALL_CONF) $(PKG_INSTALL_DIR)/etc/dleyna-renderer-service.conf $(1)/etc/
+	$(INSTALL_CONF) $(PKG_INSTALL_DIR)/etc/*.conf $(1)/etc/
 endef
 
 $(eval $(call BuildPackage,dleyna-renderer))

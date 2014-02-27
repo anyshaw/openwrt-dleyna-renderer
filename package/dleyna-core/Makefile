@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=dleyna-core
 PKG_VERSION:=0.4.0
-PKG_RELEASE:=1
+PKG_RELEASE=$(PKG_SOURCE_VERSION)
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=git://github.com/01org/dleyna-core.git
@@ -19,7 +19,6 @@ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 PKG_FIXUP:=autoreconf
 PKG_INSTALL=1
-PKG_REMOVE_FILES:=autogen.sh aclocal.m4
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/nls.mk
@@ -35,6 +34,24 @@ endef
 define Package/libdleyna-core/description
   A small utility library that aims to ease the DLNA-related tasks such as media
   profile guessing, transcoding to a given profile, etc.
+endef
+
+TARGET_CFLAGS += $(FPIC)
+
+define Build/Configure
+	(cd $(PKG_BUILD_DIR); ./autogen.sh );
+	$(call Build/Configure/Default)
+endef
+
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/include/dleyna-1.0/libdleyna/core
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/dleyna-1.0/libdleyna/core/*.h $(1)/usr/include/dleyna-1.0/libdleyna/core/
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libdleyna-core-1.0.{la,so*} $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
+	$(INSTALL_DATA) \
+		$(PKG_INSTALL_DIR)/usr/lib/pkgconfig/*.pc \
+		$(1)/usr/lib/pkgconfig
 endef
 
 define Package/libdleyna-core/install
